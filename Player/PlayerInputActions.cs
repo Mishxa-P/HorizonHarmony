@@ -123,7 +123,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""5ec46254-6686-4582-8115-d35a656155e0"",
-                    ""path"": ""<Touchscreen>/primaryTouch/position"",
+                    ""path"": ""<Touchscreen>/position"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Touch"",
@@ -134,8 +134,8 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""36f07ccb-fbc4-4207-a498-af555fa19ded"",
-                    ""path"": ""<Touchscreen>/primaryTouch/press"",
-                    ""interactions"": """",
+                    ""path"": ""<Touchscreen>/Press"",
+                    ""interactions"": ""Hold(duration=0.1)"",
                     ""processors"": """",
                     ""groups"": ""Touch"",
                     ""action"": ""RotateByTouchscreen"",

@@ -1,19 +1,22 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class PauseMenu : MonoBehaviour
 {
-    [SerializeField] private GameObject resultScreen;
+    [SerializeField] private CanvasGroup pauseScreen;
+    [SerializeField] private CanvasGroup resultScreen;
     [SerializeField] private GameObject blur;
-    [SerializeField] private GameObject HUD;
+    [SerializeField] private CanvasGroup staticHUD;
+    [SerializeField] private CanvasGroup activeHUD;
 
     private void OnEnable()
     {
-        PlayerDeath.onPlayerDied += ShowResultScreen;
+        PlayerDeathZone.onPlayerDied += ShowResultScreen;
     }
     private void OnDisable()
     {
-        PlayerDeath.onPlayerDied -= ShowResultScreen;
+        PlayerDeathZone.onPlayerDied -= ShowResultScreen;
     }
     public void PauseGame()
     {
@@ -39,20 +42,32 @@ public class PauseMenu : MonoBehaviour
         {
             GameSettings.randomInitialLocState = true;
         }
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        StartCoroutine(LoadSceneAsync(SceneManager.GetActiveScene().buildIndex));
     }
     public void LoadMainMenuScene()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
+        StartCoroutine(LoadSceneAsync(SceneManager.GetActiveScene().buildIndex - 1));
+    }
+    private IEnumerator LoadSceneAsync(int buildIndex)
+    {
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(buildIndex);
 
-        AudioManager.Singleton.StopAll();
+        while (!asyncLoad.isDone)
+        {
+            yield return null;
+        }
     }
     private void ShowResultScreen()
     {
         Timer.End();
         blur.SetActive(true);
-        HUD.SetActive(false);
-        resultScreen.SetActive(true);
+        pauseScreen.alpha = 0.0f;
+        pauseScreen.blocksRaycasts = false;
+        staticHUD.alpha = 0.0f;
+        staticHUD.blocksRaycasts = false;
+        activeHUD.alpha = 0.0f;
+        resultScreen.alpha = 1.0f;
+        resultScreen.blocksRaycasts = true;
         resultScreen.GetComponent<Result>().UpdateResult();
     }
 }

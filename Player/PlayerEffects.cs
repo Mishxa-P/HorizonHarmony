@@ -37,13 +37,19 @@ public class PlayerEffects : MonoBehaviour
         accelerationEffectAnimator.SetBool("Acceleration", true);
         StartCoroutine(SetBoolAfterDelay(accelerationEffectAnimator, "Acceleration", duration));
     }
+    private void EnableLandingEffect()
+    {
+        landingEffectAnimator.GetComponent<SpriteRenderer>().enabled = true;
+    }
     public void DisableLandingEffect()
     {
         landingEffectAnimator.GetComponent<SpriteRenderer>().enabled = false;
     }
-    private void EnableLandingEffect()
+    public void DisasbleAllEffects()
     {
-        landingEffectAnimator.GetComponent<SpriteRenderer>().enabled = true;
+        DisableLandingEffect();
+        invulnerabilityEffectAnimator.SetBool("Invulnerability", false);
+        accelerationEffectAnimator.SetBool("Acceleration", false);
     }
     private IEnumerator ResetTrigger(Animator animator, string triggerName, float time = 0.25f)
     {

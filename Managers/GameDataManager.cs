@@ -9,14 +9,15 @@ public class GameDataManager : MonoBehaviour
 
     private void OnEnable()
     {
-        PlayerDeath.onPlayerDied += UpdateTotalResults;
+        PlayerDeathZone.onPlayerDied += UpdateTotalResults;
     }
     private void OnDisable()
     {
-        PlayerDeath.onPlayerDied -= UpdateTotalResults;
+        PlayerDeathZone.onPlayerDied -= UpdateTotalResults;
     }
     private void Start()
     {
+        Time.timeScale = 1.0f;
         Timer.Begin();
         SetLocalDefaultValues();
         PlayerInputManager.Singleton.EnableInput();

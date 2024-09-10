@@ -9,7 +9,7 @@ public class MainMenu : MonoBehaviour
     [SerializeField] private GameObject desertBackground;
     [SerializeField] private GameObject oceanBackground;
     [SerializeField] private GameObject snowMountainsBackground;
-
+    [SerializeField] private CanvasGroup mainCanvasGroup;
     private bool canChangeBackground = true;
     private bool backgroundWasChaged = false;
 
@@ -28,7 +28,15 @@ public class MainMenu : MonoBehaviour
     }
     private void Start()
     {
-        //Application.targetFrameRate = 60;
+        Application.targetFrameRate = 60;
+        AudioManager.Singleton.StopAll();
+        Time.timeScale = 1.0f;
+        StartCoroutine(PlayMenuMusic());
+    }
+    private IEnumerator PlayMenuMusic()
+    {
+        yield return new WaitForSeconds(1.0f);
+        AudioManager.Singleton.FadeIn("MenuMusic", 3.0f);
     }
     private void Update()
     {
@@ -44,7 +52,17 @@ public class MainMenu : MonoBehaviour
     }
     public void StartGame()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+        mainCanvasGroup.blocksRaycasts = false;
+        StartCoroutine(LoadGameSceneAsync());
+    }
+    private IEnumerator LoadGameSceneAsync()
+    {
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex + 1);
+
+        while (!asyncLoad.isDone)
+        {
+            yield return null;
+        }
     }
     public void OnButtonClick()
     {
@@ -81,7 +99,6 @@ public class MainMenu : MonoBehaviour
         Debug.Log("Quit!");
         Application.Quit();
     }
-    
     private IEnumerator ActivateForegroundEvent()
     {
         canChangeBackground = false;
@@ -118,13 +135,19 @@ public class MainMenu : MonoBehaviour
                     break;
             }
         }
-      
+
         yield return new WaitForSeconds(backgroundChangeTime);
         canChangeBackground = true;
     }
-
     private void ChangeBackgroundaAfterForegroundEvent()
     {
         ChangeBackground(nextLocationState);
-    }    
+    }
+    private void OnDestroy()
+    {
+        if (AudioManager.Singleton != null)
+        {
+            AudioManager.Singleton.Stop("MenuMusic");
+        }
+    }
 }

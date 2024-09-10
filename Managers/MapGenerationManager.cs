@@ -27,6 +27,7 @@ public class MapGenerationManager : MonoBehaviour
     [Space(15)]
     [Header("Settings")]
     [SerializeField] private float destroyTime;
+    [SerializeField] private bool onlyForPartsLoading = false;
     public float DestroyTime { get { return destroyTime; } }
 
     [Space(15)]
@@ -74,6 +75,10 @@ public class MapGenerationManager : MonoBehaviour
     }
     private void Start()
     {
+        if (onlyForPartsLoading)
+        {
+            return;
+        }
         nextPos = transform.position;
         if (GameSettings.randomInitialLocState)
         {
@@ -87,6 +92,7 @@ public class MapGenerationManager : MonoBehaviour
         {
             NextLocationState = state;
         }
+        onPlayerEquipmentChanged?.Invoke(NextLocationState);
         ChangeLocation();
         UpdateMapPartsIndexes();
         SpawnStartParts();
@@ -95,7 +101,7 @@ public class MapGenerationManager : MonoBehaviour
     {
         if (GameSettings.locationMode == ModesMenu.LocationMode.OneLocation)
         {
-            return lastPlayerReachedPart.GetComponent<MapPart>().nextPart.transform.GetChild(0).position;
+            return lastPlayerReachedPart.GetComponent<MapPart>().nextPart.GetComponent<MapPart>().GetEndPointPosition();
         }
 
         onDestroyCurrentLocationNeedlessParts?.Invoke(lastPlayerReachedPart.GetComponent<MapPart>().nextPart.transform.position.x);
@@ -137,7 +143,7 @@ public class MapGenerationManager : MonoBehaviour
         lastTempMapParts[0].GetComponentInChildren<BigForegroundEventTrigger>().isActive = true;
 
         Debug.Log("New location is spawned");
-        return lastSpawnedPart.transform.GetChild(0).position;
+        return lastSpawnedPart.GetComponent<MapPart>().GetEndPointPosition();
     }
 
     public void ChangeLocation()
@@ -173,8 +179,7 @@ public class MapGenerationManager : MonoBehaviour
                         spriteRenderer.sprite = snowMountainsTempMapPartSprite;
                         break;
                 }
-            }
-           
+            }   
         }
 
         onPlayerEquipmentChanged?.Invoke(NextLocationState);
@@ -260,7 +265,6 @@ public class MapGenerationManager : MonoBehaviour
                 break;
         }
     }
-
     private void Spawn(List<GameObject> currentLocationMapPartsList, MapPart.PartType partType = MapPart.PartType.Flat, bool isTempMapPart = false)
     {
         GameObject mapPart = null;
@@ -309,8 +313,8 @@ public class MapGenerationManager : MonoBehaviour
         }
 
         MapPart newPart = mapPart.GetComponent<MapPart>();
-        nextPos.x = lastSpawnedPart.transform.GetChild(0).position.x - newPart.GetSpriteRendererCenterOffset().x + newPart.GetSpriteRendererBounds().extents.x;
-        nextPos.y = lastSpawnedPart.transform.GetChild(0).position.y - newPart.GetSpriteRendererCenterOffset().y - newPart.GetSpriteRendererBounds().extents.y;
+        nextPos.x = lastSpawnedPart.GetComponent<MapPart>().GetEndPointPosition().x - newPart.GetSpriteRendererCenterOffset().x + newPart.GetSpriteRendererBounds().extents.x;
+        nextPos.y = lastSpawnedPart.GetComponent<MapPart>().GetEndPointPosition().y - newPart.GetSpriteRendererCenterOffset().y - newPart.GetSpriteRendererBounds().extents.y;
         GameObject newMapPart = Instantiate(mapPart, nextPos, Quaternion.identity);
         lastSpawnedPart.GetComponent<MapPart>().nextPart = newMapPart;
         lastSpawnedPart = newMapPart;

@@ -17,6 +17,14 @@ public class AnimalPack : MonoBehaviour
     [SerializeField] private float fishSpawnDX = 1.0f;
     [SerializeField] private float fishSpawnDY = 0.5f;
 
+
+    [Header("Random position parameters")]
+    [SerializeField] private bool useRandomPos;
+    [SerializeField] private Transform leftPos;
+    [SerializeField] private Transform rightPos;
+    [SerializeField] private Transform topPos;
+    [SerializeField] private Transform bottomPos;
+
     private AnimalAnimation[] animalAnimations;
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -28,6 +36,11 @@ public class AnimalPack : MonoBehaviour
     }
     private void Start()
     {
+        if (useRandomPos)
+        {
+            transform.position = new Vector3(Random.Range(leftPos.position.x, rightPos.position.x),
+                  Random.Range(bottomPos.position.y, topPos.position.y), transform.position.z);
+        }
         animalAnimations = GetComponentsInChildren<AnimalAnimation>();
         switch (type)
         {

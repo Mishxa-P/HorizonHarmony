@@ -55,18 +55,30 @@ public class AnimalAnimation : MonoBehaviour
         while (true)
         {
             float dx = Random.Range(3.0f, 6.0f);
-            Tween moveTween = transform.DOLocalMove(transform.localPosition + new Vector3(dx, 0.0f, 0.0f), Random.Range(4.0f, 6.0f)).SetEase(Ease.Linear);
+            Tween moveTween = transform.DOLocalMove(transform.localPosition + new Vector3(dx, 0.0f, 0.0f), Random.Range(4.0f, 6.0f)).SetEase(Ease.Linear)
+                 .SetLink(gameObject);
             yield return moveTween.WaitForCompletion();
-            moveTween = transform.DOScaleX(1.0f, 0.15f);
+            moveTween = transform.DOScaleX(1.0f, 0.15f)
+                    .SetLink(gameObject);
             yield return moveTween.WaitForCompletion();
-            moveTween = transform.DOLocalMove(transform.localPosition - new Vector3(dx, 0.0f, 0.0f), Random.Range(4.0f, 6.0f)).SetEase(Ease.Linear);
+            moveTween = transform.DOLocalMove(transform.localPosition - new Vector3(dx, 0.0f, 0.0f), Random.Range(4.0f, 6.0f)).SetEase(Ease.Linear)
+                    .SetLink(gameObject);
             yield return moveTween.WaitForCompletion();
-            moveTween = transform.DOScaleX(-1.0f, 0.15f);
+            moveTween = transform.DOScaleX(-1.0f, 0.15f)
+                    .SetLink(gameObject);
             yield return moveTween.WaitForCompletion();
         }
     }
     private IEnumerator FishSwimAwayAnimation(Vector3 endPoint, float duration)
     {
+        if (transform.localScale.x >= 0 && transform.localScale.x != 1)
+        {
+            transform.localScale = new Vector3(1.0f, transform.localScale.y, transform.localScale.z); 
+        }
+        else if (transform.localScale.x < 0 && transform.localScale.x != -1)
+        {
+            transform.localScale = new Vector3(-1.0f, transform.localScale.y, transform.localScale.z);
+        }
         float angle = -Vector2.Angle(Vector2.right, transform.position - endPoint);
         if (transform.localScale.x == 1)
         {
@@ -76,30 +88,42 @@ public class AnimalAnimation : MonoBehaviour
         float distance = Vector3.Distance(endPoint, transform.position);
         float delay = 0.15f;
         StartCoroutine(FishInfiniteRotation(delay + 0.05f));
-        transform.DORotate(newRotation, delay);
+        transform.DORotate(newRotation, delay)
+                .SetLink(gameObject);
         yield return new WaitForSeconds(delay);
         if (transform.localScale.x == 1)
         {
            distance *= -1;
         }
         transform.DOMove(transform.position + transform.right * distance, duration)
-            .SetLink(gameObject);
+            .SetLink(gameObject)
+            .OnComplete(Destroy);
     }
     private IEnumerator BirdFlyAwayAnimation(Vector3 endPoint, float duration)
     {
         GetComponent<Animator>().SetTrigger("Fly");
         if (transform.position.x > endPoint.x && transform.localScale.x == 1)
         {
-            Tween rotateTween = transform.DOScaleX(-1.0f, 0.15f);
+            Tween rotateTween = transform.DOScaleX(-1.0f, 0.15f)
+                    .SetLink(gameObject);
             yield return rotateTween.WaitForCompletion();
         }
         if (transform.position.x < endPoint.x && transform.localScale.x == -1)
         {
-            Tween rotateTween = transform.DOScaleX(1.0f, 0.15f);
+            Tween rotateTween = transform.DOScaleX(1.0f, 0.15f)
+                    .SetLink(gameObject);
             yield return rotateTween.WaitForCompletion();
         }
         transform.DOMove(endPoint, duration)
-            .SetLink(gameObject);
+            .SetLink(gameObject)
+            .OnComplete(Destroy);
+    }
+    private void Destroy()
+    {
+        if (gameObject != null)
+        {
+            Destroy(gameObject);
+        }
     }
     private void OnDestroy()
     {

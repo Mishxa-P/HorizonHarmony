@@ -26,6 +26,7 @@ public class CameraManager : MonoBehaviour
     private float initialScreenX;
 
     private float vel;
+
     private void Awake()
     {
         if (Singleton != null)
@@ -47,7 +48,7 @@ public class CameraManager : MonoBehaviour
     {
         if (!mainMenuCamera)
         {
-            float targetSscreenSizeInUnits = initialScreenSizeInUnits + Math.Min(playerMovement.CurrentSpeed / playerMovement.MaxSpeedWithoutEvents, 1.0f) * (maxScreenSizeInUnits - initialScreenSizeInUnits);
+            float targetSscreenSizeInUnits = initialScreenSizeInUnits + Math.Min(playerMovement.CurrentSpeed / playerMovement.MaxSpeedForCameraAdjustments, 1.0f) * (maxScreenSizeInUnits - initialScreenSizeInUnits);
             screenSizeInUnits = Mathf.SmoothDamp(screenSizeInUnits, targetSscreenSizeInUnits, ref vel, smoothTime);
             if (previousScreenSize != screenSizeInUnits || previousAspect != virtualCamera.m_Lens.Aspect)
             {
@@ -79,4 +80,5 @@ public class CameraManager : MonoBehaviour
         yield return new WaitForSeconds(duration);
         transposer.m_ScreenX = initialScreenX;
     }
+
 }

@@ -5,9 +5,7 @@ using UnityEngine;
 public class AudioManager : MonoBehaviour
 {
     [SerializeField] private Sound[] sounds;
-
     public static AudioManager Singleton;
-
     private List<Sound> fadingSounds = new List<Sound>();
 
     private void Awake()
@@ -15,6 +13,7 @@ public class AudioManager : MonoBehaviour
         if (Singleton == null) 
         {
             Singleton = this;
+            Initialize();
         }
         else
         {
@@ -23,7 +22,7 @@ public class AudioManager : MonoBehaviour
         }
         DontDestroyOnLoad(gameObject);
     }
-    private void Start()
+    private void Initialize()
     {
         foreach (Sound s in sounds)
         {
@@ -85,7 +84,6 @@ public class AudioManager : MonoBehaviour
             }
         }
     }
-
     public void UpdateVolumeSettings()
     {
         foreach (Sound s in sounds)
@@ -103,7 +101,6 @@ public class AudioManager : MonoBehaviour
             s.source.volume = s.currentVolume;
         }
     }
-
     public void Play(string name)
     {
         Sound s = Array.Find(sounds, sound => sound.name == name);
@@ -160,13 +157,20 @@ public class AudioManager : MonoBehaviour
             Debug.Log("Audio clip: " + name + " not found");
             return;
         }
+        s.isFadingIn = false;
+        s.isFadingOut = false;
         s.source.Stop();
     }
     public void StopAll()
     {
         foreach (Sound s in sounds)
         {
-            s.source.Stop();
+            if (s != null)
+            {
+                s.isFadingIn = false;
+                s.isFadingOut = false;
+                s.source.Stop();
+            }   
         }
     }
     public void Pause(string name)

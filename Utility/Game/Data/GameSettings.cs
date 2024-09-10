@@ -2,6 +2,7 @@ public static class GameSettings
 {
     public static bool firstLanguageLoad;
     public static bool inversion;
+    public static bool visualEffects;
     public static float globalVolume;
     public static float musicVolume;
     public static float soundsVolume;

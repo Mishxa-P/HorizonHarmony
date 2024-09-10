@@ -8,10 +8,18 @@ public class Obstacle : MonoBehaviour
     public void PlayDestroyAnimation()
     {
         animator.SetBool("IsDestroyed", true);
-        AudioManager.Singleton.Play("Rock_crash");
-        if (obstacleType == MapGenerationManager.LocationState.SnowMountains)
+        switch (obstacleType)
         {
-            AudioManager.Singleton.Play("Snowbrake");
+            case MapGenerationManager.LocationState.Desert:
+                AudioManager.Singleton.Play("Rock_crash");
+                break;
+            case MapGenerationManager.LocationState.Ocean:
+                AudioManager.Singleton.Play("Coral_crash");
+                break;
+            case MapGenerationManager.LocationState.SnowMountains:
+                AudioManager.Singleton.Play("Rock_crash");
+                AudioManager.Singleton.Play("Snowbrake");
+                break;
         }
     }
 }

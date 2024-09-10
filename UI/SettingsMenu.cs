@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class SettingsMenu : MonoBehaviour
 {
     [SerializeField] private Toggle inversion;
+    [SerializeField] private Toggle visualEffects;
     [SerializeField] private RectTransform developersFrame;
     [SerializeField] private Slider globalVolume;
     [SerializeField] private Slider musicVolume;
@@ -17,9 +19,13 @@ public class SettingsMenu : MonoBehaviour
     private const float ENGLISH_DEV_FRAME_HEIGHT = 65.0f;
     private const float ENGLISH_DEV_FRAME_POS_X = -110.0f;
 
+    public static UnityEvent onVFXSettingChanged = new UnityEvent();
+
+    private bool firstUpdate = true;
     private void OnEnable()
     {
         inversion.onValueChanged.AddListener(SetInversion);
+        visualEffects.onValueChanged.AddListener(SetVFX);
         globalVolume.onValueChanged.AddListener(SetGlobalVolume);
         musicVolume.onValueChanged.AddListener(SetMusicVolume);
         soundsVolume.onValueChanged.AddListener(SetSoundsVolume);
@@ -27,20 +33,36 @@ public class SettingsMenu : MonoBehaviour
     private void OnDisable()
     {
         inversion.onValueChanged.RemoveListener(SetInversion);
+        visualEffects.onValueChanged.RemoveListener(SetVFX);
         globalVolume.onValueChanged.RemoveListener(SetGlobalVolume);
         musicVolume.onValueChanged.RemoveListener(SetMusicVolume);
         soundsVolume.onValueChanged.RemoveListener(SetSoundsVolume);
     }
-    private void Start()
+    public void UpdateSettings()
     {
         inversion.isOn = GameSettings.inversion;
+        visualEffects.isOn = GameSettings.visualEffects;
         globalVolume.value = GameSettings.globalVolume;
         musicVolume.value = GameSettings.musicVolume;
         soundsVolume.value = GameSettings.soundsVolume;
+        firstUpdate = false;
     }
     private void SetInversion(bool isOn)
     {
+        if (!firstUpdate)
+        {
+            AudioManager.Singleton.Play("Click");
+        }
         GameSettings.inversion = isOn;
+    }
+    private void SetVFX(bool isOn)
+    {
+        if (!firstUpdate)
+        {
+            AudioManager.Singleton.Play("Click");
+        }
+        GameSettings.visualEffects = isOn;
+        onVFXSettingChanged?.Invoke();
     }
     private void SetGlobalVolume(float value)
     {

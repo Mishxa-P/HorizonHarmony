@@ -26,8 +26,15 @@ public class MapPart : MonoBehaviour
     [SerializeField] private GameObject slide;
     [SerializeField] private GameObject city;
     [SerializeField] private GameObject animalPack;
+    [SerializeField] private List<Transform> animalsPossibleLocations;
     [SerializeField] private PartType partType;
 
+    [Header("EndPoint")]
+    [SerializeField] private Transform endPoint;
+
+    [Header("CustomGroundSpriteBounders")]
+    [SerializeField] private bool useCustomBounders = false;
+    //[SerializeField] private Bounds bounds;
     public PartType Type { get => partType; private set => partType = value; }
 
     public enum PartType
@@ -37,6 +44,8 @@ public class MapPart : MonoBehaviour
 
     [HideInInspector]
     public GameObject nextPart;
+
+    private bool spawnAnimalsInCity = false;
 
     private void Start()
     {
@@ -104,7 +113,7 @@ public class MapPart : MonoBehaviour
     }  
     private void SpawnSlide()
     {
-        if(slide != null)
+        if (slide != null)
         {
             int num = Random.Range(0, 2);
             if (num == 0)
@@ -129,6 +138,7 @@ public class MapPart : MonoBehaviour
             else
             {
                 city.SetActive(true);
+                spawnAnimalsInCity = true;
             }
         }
     }
@@ -143,20 +153,71 @@ public class MapPart : MonoBehaviour
             }
             else
             {
-                animalPack.SetActive(true);
-            }
+                if (animalsPossibleLocations.Count > 0)
+                {
+                    if (spawnAnimalsInCity)
+                    {
+                        int index = Random.Range(0, animalsPossibleLocations.Count);
+                        animalPack.transform.position = animalsPossibleLocations[index].position;
+                        animalPack.SetActive(true);
+                    }
+                    else
+                    {
+                        animalPack.SetActive(false);
+                    }
+                }
+                else
+                {
+                    animalPack.SetActive(true);
+                }
+            }  
         }
+    }
+    public Vector3 GetEndPointPosition()
+    {
+        return endPoint.position;
     }
     public Vector3 GetSpriteRendererCenterOffset()
     {
-        return GetComponentInChildren<SpriteRenderer>().bounds.center - transform.position;
+        if (useCustomBounders)
+        {
+            Bounds bounds = GetComponentInChildren<BoundsFinder>().FindBounds();
+            return bounds.center - transform.position;
+        }
+        else
+        {
+            SpriteRenderer[] sprites = GetComponentsInChildren<SpriteRenderer>();
+            foreach (SpriteRenderer sprite in sprites)
+            {
+                if (sprite.gameObject.layer == LayerMask.NameToLayer("Ground"))
+                {
+                    return sprite.bounds.center - transform.position;
+                }
+            }
+            Debug.LogError("Ground sprite is not found!");
+            return Vector3.zero;
+        }
     }
-
     public Bounds GetSpriteRendererBounds()
     {
-        return GetComponentInChildren<SpriteRenderer>().bounds;
+        if (useCustomBounders)
+        {
+            return GetComponentInChildren<BoundsFinder>().FindBounds();
+        }
+        else
+        {
+            SpriteRenderer[] sprites = GetComponentsInChildren<SpriteRenderer>();
+            foreach (SpriteRenderer sprite in sprites)
+            {
+                if (sprite.gameObject.layer == LayerMask.NameToLayer("Ground"))
+                {
+                    return sprite.bounds;
+                }
+            }
+            Debug.LogError("Ground sprite is not found!");
+            return new Bounds();
+        } 
     }
-
     public void ChangeSprite(Sprite mapPartSprite)
     {
         GetComponent<SpriteRenderer>().sprite = mapPartSprite;

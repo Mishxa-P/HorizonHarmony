@@ -55,6 +55,7 @@ public class Saves : MonoBehaviour
     private class SaveGameSettings
     {
         public bool inversion;
+        public bool visualEffects;
         public float globalVolume;
         public float musicVolume;
         public float soundsVolume;
@@ -91,6 +92,7 @@ public class Saves : MonoBehaviour
         {
             firstLanguageLoad = GameSettings.firstLanguageLoad,
             inversion = GameSettings.inversion,
+            visualEffects = GameSettings.visualEffects,
             globalVolume = GameSettings.globalVolume,
             musicVolume = GameSettings.musicVolume,
             soundsVolume = GameSettings.soundsVolume,
@@ -190,6 +192,7 @@ public class Saves : MonoBehaviour
             }
 
             GameSettings.inversion = gameSettings.inversion;
+            GameSettings.visualEffects = gameSettings.visualEffects;
             GameSettings.globalVolume = gameSettings.globalVolume;
             GameSettings.soundsVolume = gameSettings.soundsVolume;
             GameSettings.musicVolume = gameSettings.musicVolume;
@@ -229,6 +232,7 @@ public class Saves : MonoBehaviour
     {
         GameSettings.firstLanguageLoad = true;
         GameSettings.inversion = false;
+        GameSettings.visualEffects = false;
         GameSettings.globalVolume = 0.5f;
         GameSettings.musicVolume = 0.5f;
         GameSettings.soundsVolume = 0.5f;
@@ -279,4 +283,12 @@ public class Saves : MonoBehaviour
     {
         Save();
     }
- }
+
+    private void OnApplicationPause(bool pause)
+    {
+        if (pause)
+        {
+            Save();
+        }
+    }
+}

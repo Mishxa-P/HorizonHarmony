@@ -8,11 +8,11 @@ public class BigForegroundEventTrigger : MonoBehaviour
     private bool destroyable = true;
     private void OnEnable()
     {
-        PlayerDeath.onPlayerDied += ChangeToUndestroyable;
+        PlayerDeathZone.onPlayerDied += ChangeToUndestroyable;
     }
     private void OnDisable()
     {
-        PlayerDeath.onPlayerDied -= ChangeToUndestroyable;
+        PlayerDeathZone.onPlayerDied -= ChangeToUndestroyable;
     }
 
     private void OnTriggerEnter2D(Collider2D collision)

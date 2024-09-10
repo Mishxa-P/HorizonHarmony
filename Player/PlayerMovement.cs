@@ -8,50 +8,56 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Slide")]
-    [SerializeField] private float initialSpeed = 2.0f;
-    [SerializeField] private float maxMultipierForSpeed = 2.5f;
+    [Header("Speed")]
+    [SerializeField] private float initialSpeed = 8.0f;
+    [SerializeField] private float maxGroundAcceleration = 14.0f;
+    [SerializeField] private float maxFallingAcceleration = 8.0f;
+    [SerializeField] private float maxFallingSpeed = 35.0f;
+
+    [Header("AccelerationOnGround")]
     [Range(0.0f, 90.0f)]
     [SerializeField] private float maxDownAngle = 75.0f;
-    [SerializeField] private float accelerationForMaxDownAngle = 0.5f;
+    [SerializeField] private float groundAccelerationIncreaseForMaxDownAngle = 0.08f;
     [Range(0.0f, 45.0f)]
-    [SerializeField] private float maxUpAngle = 30.0f;
-    [SerializeField] private float slowDownForMaxUpAngle = 0.5f;
-    [SerializeField] private float minSlowDown = 0.1f;
+    [SerializeField] private float maxUpAngle = 45.0f;
+    [SerializeField] private float minGroundAccelerationFade = 0.04f;
+    [SerializeField] private float groundAccelerationFadeForMaxUpAngle = 0.1f;
+    [SerializeField] private float groundAccelerationFadeInFall = 0.01f;
+
+    [Header("AccelerationInFall")]
+    [SerializeField] private float fallingAccelerationIncrease = 0.04f;
+    [SerializeField] private float fallingAccelerationFadeOnGround = 0.03f;
 
     [Header("Jump")]
-    [SerializeField] private float jumpForce = 250.0f;
-
-    [Header("Fall")]
-    [SerializeField] private float maxFallingSpeed = 35.0f;
-    [SerializeField] private float accelerationForFalling = 0.02f;
+    [SerializeField] private float jumpForce = 400.0f;
 
     [Header("Rotation")]
-    [SerializeField] private float rotationRate = 2.5f;
-    private float currentAngle = 0.0f;
+    [SerializeField] private float rotationRate = 2.65f;
 
     [Space(15)]
     [Header("Ground")]
     [SerializeField] private LayerMask whatIsGround;
     [SerializeField] private Transform groundCheckCircleCenter;
-    [SerializeField] private float groundCheckCircleRadius = 0.5f;
+    [SerializeField] private float groundCheckCircleRadius = 0.11f;
     [SerializeField] private Transform destructionCheckPoint;
 
     [Space(15)]
     [Header("Development")]
     [SerializeField] private bool showGroundCheckCircle = false;
-    [SerializeField] private float acceleration = 0.0f;
+    [SerializeField] private float groundAcceleration = 0.0f;
+    [SerializeField] private float fallingAcceleration = 0.0f;
 
     public float InitialSpeed { get; private set; }
     public float CurrentSpeed { get; private set; }
-    public float MaxSpeedWithoutEvents { get; private set; }
+    public float MaxSpeedForCameraAdjustments { get; private set; }
 
     private Rigidbody2D rigidBody2D;
     private PlayerEvents playerEvents;
     private PlayerEffects playerEffects;
     private Animator playerMainAnimator;
 
-    private float rotateInput = 0.0f;
+    private bool rotate = false;
+    private float currentAngle = 0.0f;
     private bool isGrounded = false;
     private bool canCheckIfIsGrounded = true;
     private bool isSliding = false;
@@ -60,6 +66,8 @@ public class PlayerMovement : MonoBehaviour
    
     private Vector2 direction;
     private Vector2 jumpDirection;
+    private bool wasGrounded = false;
+    private bool wasSliding = false;
 
     private float screenWidth;
 
@@ -75,6 +83,24 @@ public class PlayerMovement : MonoBehaviour
         PlayerInputManager.Singleton.InputActions.Player.Jump.performed -= Jump;
         PlayerInputManager.Singleton.InputActions.Player.RotateByTouchscreen.performed -= TouchRotateStart;
         PlayerInputManager.Singleton.InputActions.Player.RotateByTouchscreen.canceled -= TouchRotateEnd;
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") || collision.gameObject.layer == LayerMask.NameToLayer("Slide") && !playerEvents.IsPlayerDead)
+        {
+            Vector3 offset = transform.rotation * Vector2.up;
+            RaycastHit2D hit = Physics2D.Raycast(groundCheckCircleCenter.position, -offset.normalized, groundCheckCircleRadius * 6.0f, whatIsGround);
+            Debug.DrawLine(groundCheckCircleCenter.position, groundCheckCircleCenter.position - offset.normalized * groundCheckCircleRadius * 6.0f, Color.cyan);
+            if (hit)
+            {
+                //Debug.DrawLine(hit.point, hit.point + hit.normal, Color.red, 3.0f);
+                if (!wasGrounded)
+                {
+                    rigidBody2D.AddForce(-hit.normal * jumpForce);
+                }
+            }
+        }
     }
     private void Awake()
     {
@@ -95,7 +121,7 @@ public class PlayerMovement : MonoBehaviour
     private void Start()
     {
         screenWidth = Screen.width;
-        MaxSpeedWithoutEvents = initialSpeed * maxMultipierForSpeed;
+        MaxSpeedForCameraAdjustments = initialSpeed + maxGroundAcceleration + maxFallingAcceleration * 0.25f;
         InitialSpeed = initialSpeed;
         CurrentSpeed = initialSpeed;
     }
@@ -125,69 +151,65 @@ public class PlayerMovement : MonoBehaviour
         {
             return;
         }
-
-        if (PlayerInputManager.Singleton.InputActions.Player.TouchPosition.ReadValue<Vector2>().x != 0.0f)
-        {
-            if (PlayerInputManager.Singleton.InputActions.Player.TouchPosition.ReadValue<Vector2>().x < screenWidth / 2)
-            {
-                rotateInput = -1.0f;
-            }
-            else
-            {
-                rotateInput = 1.0f;
-            }
-        } 
+        rotate = true;
     }
     private void TouchRotateEnd(InputAction.CallbackContext context)
     {
-       rotateInput = 0.0f;
+        rotate = false;
     }
     private void CheckIsUpsideDown()
     {
+        bool wasUpsideDown = isUpsideDown;
+        isUpsideDown = false;
         if (groundCheckCircleCenter.position.y <= destructionCheckPoint.position.y)
         {
             isUpsideDown = true;
-            GetComponentInChildren<CapsuleCollider2D>().enabled = false;
+            if (!wasUpsideDown)
+            {
+                int slideLayer = LayerMask.NameToLayer("Slide");
+                GetComponentInChildren<CapsuleCollider2D>().forceReceiveLayers &= ~(1 << slideLayer);
+            }
         }
         else
         {
             isUpsideDown = false;
-            GetComponentInChildren<CapsuleCollider2D>().enabled = true;
+            if (wasUpsideDown)
+            {
+                int slideLayer = LayerMask.NameToLayer("Slide");
+                GetComponentInChildren<CapsuleCollider2D>().forceReceiveLayers |= (1 << slideLayer);
+            }
         }
     }
     private void CheckIsGrounded()
     {
-        bool wasGrounded = isGrounded;
-        bool wasSliding = isSliding;
+        wasGrounded = isGrounded;
+        wasSliding = isSliding;
         isSliding = false;
         isGrounded = false;
 
         if (!playerEvents.IsPlayerDead && !isUpsideDown && canCheckIfIsGrounded)
         {
             Collider2D[] colliders = Physics2D.OverlapCircleAll(groundCheckCircleCenter.position, groundCheckCircleRadius, whatIsGround);
-            HandleCollisions(colliders, ref isGrounded, ref isSliding, ref wasGrounded, ref wasSliding);
+            HandleCollisions(colliders, ref isGrounded, ref isSliding, ref wasSliding);
         }
-        
+
         if (!isGrounded)
         {
             rigidBody2D.velocity = new Vector2(rigidBody2D.velocity.x, Mathf.Clamp(rigidBody2D.velocity.y, -maxFallingSpeed, maxFallingSpeed));
             if (rigidBody2D.velocity.y < 0.0f)
             {
-                if (acceleration < MaxSpeedWithoutEvents - initialSpeed)
+                if (fallingAcceleration < maxFallingAcceleration)
                 {
-                    acceleration += accelerationForFalling;
+                    fallingAcceleration += fallingAccelerationIncrease;
                 }
-                else
-                {
-                    acceleration = MaxSpeedWithoutEvents - initialSpeed;
-                }
-                CurrentSpeed = acceleration + initialSpeed;
+                CurrentSpeed = groundAcceleration + fallingAcceleration + initialSpeed;
             }
-           
+
             if (wasSliding)
             {
                 playerMainAnimator.SetBool("IsSliding", false);
                 playerEvents.EndSliding();
+                AudioManager.Singleton.Stop("Slide");
                 Debug.Log("Stoped sliding");
                 isTricking = true;
                 Debug.Log("The player is in the process of a trick");
@@ -198,16 +220,25 @@ public class PlayerMovement : MonoBehaviour
                 playerEffects.DisableLandingEffect();
             }
 
+            if (groundAcceleration > 0.0f)
+            {
+                groundAcceleration -= groundAccelerationFadeInFall;
+            }
+            else
+            {
+                groundAcceleration = 0.0f;
+            }
+
             playerMainAnimator.SetBool("IsFalling", true);
         }
     }   
-    private void HandleCollisions(Collider2D[] colliders, ref bool isGrounded, ref bool isSliding, ref bool wasGrounded, ref bool wasSliding)
+    private void HandleCollisions(Collider2D[] colliders, ref bool isGrounded, ref bool isSliding, ref bool wasSliding)
     {
         for (int i = 0; i < colliders.Length; i++)
         {
             if (colliders[i].gameObject != gameObject)
             {
-                if (colliders[i].gameObject.layer == LayerMask.NameToLayer("Slide") && rigidBody2D.velocity.y >= jumpForce * 0.1f)
+                if (colliders[i].gameObject.layer == LayerMask.NameToLayer("Slide") && rigidBody2D.velocity.y > MaxSpeedForCameraAdjustments)
                 {
                     Debug.Log("Player passed slide");
                     break;
@@ -220,6 +251,7 @@ public class PlayerMovement : MonoBehaviour
                     {
                         playerMainAnimator.SetBool("IsSliding", true);
                         playerEvents.StartSliding();
+                        AudioManager.Singleton.Play("Slide");
                         Debug.Log("Started sliding");
                     }
                 }
@@ -227,14 +259,15 @@ public class PlayerMovement : MonoBehaviour
                 {
                     playerMainAnimator.SetBool("IsFalling", false);
                     playerMainAnimator.SetBool("IsJumping", false);
+
                     if (!isSliding)
                     {
                         playerEffects.PlayLandingEffect();
                         Debug.Log("Landed");
                     }
-                    if (acceleration > MaxSpeedWithoutEvents - initialSpeed)
+                    if (groundAcceleration > maxGroundAcceleration)
                     {
-                        acceleration = MaxSpeedWithoutEvents - initialSpeed;
+                        groundAcceleration = maxGroundAcceleration;
                     }
                 }
                 if (isTricking && !isSliding || playerEvents.DestroyedObstacle && !isSliding)
@@ -249,74 +282,86 @@ public class PlayerMovement : MonoBehaviour
     }
     private void SlopeCheck()
     {
-        if(isGrounded)
+        if (isGrounded)
         {
             Vector3 offset = transform.rotation * Vector2.up;
             RaycastHit2D hit = Physics2D.Raycast(groundCheckCircleCenter.position, -offset.normalized, groundCheckCircleRadius * 1.5f, whatIsGround);
-            Debug.DrawLine(groundCheckCircleCenter.position, groundCheckCircleCenter.position - offset.normalized * groundCheckCircleRadius * 1.5f, Color.cyan);
+            //Debug.DrawLine(groundCheckCircleCenter.position, groundCheckCircleCenter.position - offset.normalized * groundCheckCircleRadius * 1.5f, Color.cyan);
             if (hit)
             {
-                Debug.DrawLine(hit.point, hit.point + hit.normal, Color.red, 3.0f);
+                //Debug.DrawLine(hit.point, hit.point + hit.normal, Color.red, 3.0f);
+                if (!wasGrounded)
+                {
+                    rigidBody2D.AddForce(-hit.normal * 250.0f);
+                }
+            
                 float angle = Vector2.Angle(Vector2.up, hit.normal);
                 jumpDirection = hit.normal;
                 if (Vector2.Angle(Vector2.right, hit.normal) <= 85.0f)
                 {
                     direction = new Vector2(MathF.Cos(Mathf.Deg2Rad * angle), -Mathf.Sin(Mathf.Deg2Rad * angle));
-                    if (acceleration + initialSpeed < MaxSpeedWithoutEvents)
+                    if (groundAcceleration < maxGroundAcceleration)
                     {
-                        acceleration += (angle / maxDownAngle) * accelerationForMaxDownAngle;
+                        groundAcceleration += (angle / maxDownAngle) * groundAccelerationIncreaseForMaxDownAngle;
                     }
                     else
                     {
-                        acceleration = MaxSpeedWithoutEvents - initialSpeed;
+                        groundAcceleration = maxGroundAcceleration;
                     }
                 }
                 else if (Vector2.Angle(Vector2.right, hit.normal) > 85.0f && Vector2.Angle(Vector2.right, hit.normal) <= 90.0f)
                 {
                     direction = new Vector2(MathF.Cos(Mathf.Deg2Rad * angle), -Mathf.Sin(Mathf.Deg2Rad * angle));
-                    if (acceleration > 0.0f)
+                    if (groundAcceleration > 0.0f)
                     {
-                        acceleration -= minSlowDown;
+                        groundAcceleration -= minGroundAccelerationFade;
                     }
                     else
                     {
-                        acceleration = 0.0f;
+                        groundAcceleration = 0.0f;
                     }
                 }
                 else
                 {
                     jumpDirection = Vector2.up;
                     direction = new Vector2(MathF.Cos(Mathf.Deg2Rad * angle), Mathf.Sin(Mathf.Deg2Rad * angle));
-                    if (acceleration > 0.0f)
+                    if (groundAcceleration > 0.0f)
                     {
-                        acceleration -= (angle / maxUpAngle) * slowDownForMaxUpAngle;
+                        groundAcceleration -= (angle / maxUpAngle) * groundAccelerationFadeForMaxUpAngle;
                     }
                     else
                     {
-                        acceleration = 0.0f;
+                        groundAcceleration = 0.0f;
                     }
                 }
 
-                CurrentSpeed = acceleration + initialSpeed;
-
-                if (playerEvents.IsWindEvent)
+                if (fallingAcceleration > 0.0f)
                 {
-                    CurrentSpeed *= playerEvents.WindMultiplierForSpeed;
+                    fallingAcceleration -= fallingAccelerationFadeOnGround;
                 }
 
-                if (playerEvents.IsTrickEvent)
+                if (!playerEvents.IsPlayerDead)
                 {
-                    CurrentSpeed *= playerEvents.TrickMultiplierForSpeed;
+                    CurrentSpeed = groundAcceleration + fallingAcceleration + initialSpeed;
+                    if (playerEvents.IsWindEvent)
+                    {
+                        CurrentSpeed *= playerEvents.WindMultiplierForSpeed;
+                    }
+                    if (playerEvents.IsTrickEvent)
+                    {
+                        CurrentSpeed *= playerEvents.TrickMultiplierForSpeed;
+                    }
+                    rigidBody2D.velocity = direction * CurrentSpeed;
                 }
-
-                if (CurrentSpeed < InitialSpeed)
+                else
                 {
-                    CurrentSpeed = initialSpeed;
-                }
-
-                rigidBody2D.velocity = direction * CurrentSpeed;
-
+                    if (CurrentSpeed > initialSpeed)
+                    {
+                        CurrentSpeed -= minGroundAccelerationFade;
+                    }      
+                }              
                 playerMainAnimator.SetFloat("Speed", CurrentSpeed);
+
 #if UNITY_EDITOR
                 OnNextDrawGizmos += () =>
                 {
@@ -355,23 +400,34 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Rotate()
     {
-        if (!isGrounded && !playerEvents.IsPlayerDead)
+        if (!isGrounded && !playerEvents.IsPlayerDead && rotate)
         {
-            currentAngle = transform.eulerAngles.z;
-            if (GameSettings.inversion)
+            float rotateInput = 0.0f;
+            if (PlayerInputManager.Singleton.InputActions.Player.TouchPosition.ReadValue<Vector2>().x != 0.0f)
             {
-                currentAngle += (rotateInput * rotationRate);
+                if (PlayerInputManager.Singleton.InputActions.Player.TouchPosition.ReadValue<Vector2>().x < screenWidth / 2)
+                {
+                    rotateInput = -1.0f;
+                }
+                else
+                {
+                    rotateInput = 1.0f;
+                }
             }
-            else
-            {
-                currentAngle -= (rotateInput * rotationRate);
-            }
-            rigidBody2D.MoveRotation(currentAngle);
             if (rotateInput != 0.0f)
             {
+                currentAngle = transform.eulerAngles.z;
+                if (GameSettings.inversion)
+                {
+                    currentAngle += (rotateInput * rotationRate);
+                }
+                else
+                {
+                    currentAngle -= (rotateInput * rotationRate);
+                }
+                rigidBody2D.MoveRotation(currentAngle);
                 Vector3 vector = groundCheckCircleCenter.position - destructionCheckPoint.position;
                 vector.Normalize();
-                Debug.Log(vector.y);
                 if (vector.y <= -0.95f && !isTricking)
                 {
                     isTricking = true;

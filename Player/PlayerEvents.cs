@@ -59,12 +59,12 @@ public class PlayerEvents : MonoBehaviour
     private void OnEnable()
     {
         MapGenerationManager.onPlayerEquipmentChanged += ChangeEquipment;
-        PlayerDeath.onPlayerDied += Death;
+        PlayerDeathZone.onPlayerDied += Death;
     }
     private void OnDisable()
     {
         MapGenerationManager.onPlayerEquipmentChanged -= ChangeEquipment;
-        PlayerDeath.onPlayerDied -= Death;
+        PlayerDeathZone.onPlayerDied -= Death;
     }
     public void Initialize(LayerMask ground, Transform groundCheckCircleCenter, Transform destructionCheckPoint)
     {
@@ -121,7 +121,7 @@ public class PlayerEvents : MonoBehaviour
                 }
                 else
                 {
-                    PlayerDeath.onPlayerDied?.Invoke(); 
+                    PlayerDeathZone.onPlayerDied?.Invoke(); 
                 }
             }
             else
@@ -244,26 +244,26 @@ public class PlayerEvents : MonoBehaviour
             IsPlayerDead = true;
             AudioManager.Singleton.StopAll();
             AudioManager.Singleton.Play("Death");
-            rigidBody2D.simulated = false;
             PlayerInputManager.Singleton.DisableInput();
+            rigidBody2D.simulated = false;
+            playerEffects.DisasbleAllEffects();
 
-            RaycastHit2D hit = Physics2D.Raycast(groundCheckCircleCenter.position, Vector2.down, 5.0f, whatIsGround);
-            Debug.DrawLine(destructionCheckPoint.position, groundCheckCircleCenter.position, Color.green, 30.0f);
-            float angle = Vector2.Angle(new Vector2(groundCheckCircleCenter.position.x - destructionCheckPoint.position.x,
-            groundCheckCircleCenter.position.y - destructionCheckPoint.position.y), hit.normal);
-            if (groundCheckCircleCenter.position.y < destructionCheckPoint.position.y && Math.Abs(angle) <= 0.1f)
+            Vector3 direction = new Vector3(groundCheckCircleCenter.position.x - destructionCheckPoint.position.x,
+                groundCheckCircleCenter.position.y - destructionCheckPoint.position.y).normalized;
+            RaycastHit2D hit = Physics2D.Raycast(groundCheckCircleCenter.position, direction, 5.0f, whatIsGround);
+            Debug.DrawLine(groundCheckCircleCenter.position, groundCheckCircleCenter.position + direction * 5.0f, Color.cyan, 30.0f);
+            Debug.DrawLine(hit.point, hit.point + hit.normal * 5.0f, Color.green, 30.0f);
+
+            float angle = Vector2.Angle(hit.normal, Vector2.up);
+            if ((hit.point + hit.normal * 5.0f).x > (hit.point + Vector2.up).x)
             {
-                transform.Rotate(0.0f, 0.0f, 180.0f);
-            }
-            else if (transform.rotation.z < 0.0f)
-            {
-                transform.Rotate(0.0f, 0.0f, angle);
+                transform.eulerAngles = new Vector3(0.0f, 0.0f, -angle);
             }
             else
             {
-                transform.Rotate(0.0f, 0.0f, -angle);
+                transform.eulerAngles = new Vector3(0.0f, 0.0f, angle);
             }
-
+    
             playerMainAnimator.SetTrigger("Crashed");
             if (MapGenerationManager.Singleton.CurrentLocationState == MapGenerationManager.LocationState.Ocean)
             {
